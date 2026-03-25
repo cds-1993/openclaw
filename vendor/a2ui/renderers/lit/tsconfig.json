@@ -8,7 +8,6 @@
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
     "inlineSources": false,
-    // "allowJs": true,
     "preserveWatchOutput": true,
     "sourceMap": true,
     "target": "es2022",
@@ -31,5 +30,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.json"]
+  "include": ["src/**/*.ts", "src/**/*.json"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
 }
