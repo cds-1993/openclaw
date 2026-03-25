@@ -1,0 +1,72 @@
+name: Build dist branch
+
+on:
+  push:
+    branches:
+      - stable-with-patches
+  workflow_dispatch:
+
+jobs:
+  build-dist:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-openclaw-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-openclaw-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build && pnpm ui:build
+
+      - name: Prepare and push dist branch
+        run: |
+          SOURCE_SHA=$(git rev-parse --short HEAD)
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Remove prepack from package.json so pnpm won't try to rebuild when referenced
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            delete pkg.scripts.prepack;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          # Force-add built artifacts (overriding .gitignore)
+          git add -f dist/ dist-runtime/ 2>/dev/null || true
+          git add package.json
+
+          git commit -m "chore(dist): pre-built from ${SOURCE_SHA}"
+
+          # Force-push to dist branch
+          git push origin HEAD:refs/heads/dist --force
+
+          echo "dist branch updated: $(git rev-parse HEAD)"
