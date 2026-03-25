@@ -60,11 +60,15 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
-          # Force-add built artifacts (overriding .gitignore)
-          git add -f dist/ dist-runtime/ 2>/dev/null || true
-          git add package.json
+          # Remove dist entries from .gitignore so git add can track built artifacts
+          sed -i '/^dist$/d' .gitignore
+          sed -i '/^dist-runtime$/d' .gitignore
 
-          git commit -m "chore(dist): pre-built from ${SOURCE_SHA}"
+          # Stage built artifacts and modified files
+          git add dist/ dist-runtime/ .gitignore package.json
+
+          # Commit without pre-commit hooks (formatters/linters not needed for dist branch)
+          git commit --no-verify -m "chore(dist): pre-built from ${SOURCE_SHA}"
 
           # Force-push to dist branch
           git push origin HEAD:refs/heads/dist --force
