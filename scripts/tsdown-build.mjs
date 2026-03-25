@@ -8,7 +8,7 @@ const logLevel = process.env.OPENCLAW_BUILD_VERBOSE ? "info" : "warn";
 const extraArgs = process.argv.slice(2);
 const INEFFECTIVE_DYNAMIC_IMPORT_RE = /\[INEFFECTIVE_DYNAMIC_IMPORT\]/;
 const UNRESOLVED_IMPORT_RE = /\[UNRESOLVED_IMPORT\]/;
-const ANSI_ESCAPE_RE = new RegExp(String.raw`\[[0-9;]*m`, "g");
+const ANSI_ESCAPE_RE = new RegExp(String.raw`\u001B\[[0-9;]*m`, "g");
 
 function removeDistPluginNodeModulesSymlinks(rootDir) {
   const extensionsDir = path.join(rootDir, "extensions");
@@ -76,8 +76,7 @@ if (stderr) {
   process.stderr.write(stderr);
 }
 
-const allOutput = `${stdout}
-${stderr}`;
+const allOutput = `${stdout}\n${stderr}`;
 
 if (INEFFECTIVE_DYNAMIC_IMPORT_RE.test(allOutput)) {
   console.error(
@@ -89,8 +88,7 @@ if (INEFFECTIVE_DYNAMIC_IMPORT_RE.test(allOutput)) {
 // Run the fatal-import check regardless of tsdown's exit code: some versions of
 // tsdown/rolldown exit non-zero even when all unresolved imports are in extensions/
 // (which are acceptable external dependencies built separately).
-const fatalUnresolvedImport = findFatalUnresolvedImport(allOutput.split("
-"));
+const fatalUnresolvedImport = findFatalUnresolvedImport(allOutput.split("\n"));
 
 if (fatalUnresolvedImport) {
   console.error(`Build emitted [UNRESOLVED_IMPORT] outside extensions: ${fatalUnresolvedImport}`);
